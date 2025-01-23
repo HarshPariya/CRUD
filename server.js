@@ -10,7 +10,6 @@ app.get('/', (req, res) => {
 })
 app.post('/register', async (req, res) => {
     const { email, name, password } = req.body
-
     try {
         const userExist = await User.findOne({ email: email })
         if (userExist) {
@@ -47,21 +46,33 @@ app.post('/login',async(req,res)=>{
 app.delete('/delete/:id',async (req,res)=>{
     const {id}=req.params
 
-    try{
-        const userExist=await User.findByIdAndDelete({_id:id})
-        if(!userExist){
-                return res.send({message:"User not found "})
+    const { email, name, password } = req.body
+    try {
+        const userExist = await User.updateOne({ email: email })
+        if (userExist) {
+            return res.send({ message: "User Updated" })
         }
-
-        res.send({message:"User Deleted Successfully "})
-        
+        const userData = await User({ email, name, password })
+        userData.save();
+        res.send({ message: "User Updated Successfully" })
     }
-    catch(err){
+    catch (err) {
         res.send(err)
+}})
+
+app.put("/update/:id", async (req, res) => {
+
+    try {
+      const userExist = await User.findByIdAndUpdate(req.params.id, req.body , {new : true});
+      if (!userExist) {
+        return res.send({ message: "User not Updated Successfully" });
+      }
+      res.send({ message: "User Updated Successfully" });
+  
+    } catch (err) {
+      res.send(err);
     }
-
-
-})
+  });
 
 app.listen(4000, (req, res) => {
     console.log("Server is running")
