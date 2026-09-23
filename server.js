@@ -4,51 +4,55 @@ import connectDB from "./config/db.js";
 import User from "./model/userSchema.js";
 import bcrypt from "bcrypt";
 
-
 // Middleware
 connectDB();
 app.use(express.json());
-
 
 app.get("/", (req, res) => {
   res.send("HEllo");
 });
 
-// Create
+// Create (Register)
 app.post("/register", async (req, res) => {
   const { email, name, password } = req.body;
   try {
-    const userExist = await User.findOne({ email: email });
+    const userExist = await User.findOne({ email });
     if (userExist) {
       return res.send({ message: "User Already Exist" });
     }
-    // const hashedPassword = await bcrypt.hash(password, 10);
-    // console.log(hashedPassword);
-
-    // const userData = await User({ email, name, password: hashedPassword });
-    userData.save();
-
+    // Hash password before storing
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const userData = new User({ email, name, password: hashedPassword });
+    await userData.save();
     return res.send({ message: "User Created Successfully" });
   } catch (err) {
     res.send(err);
   }
 });
 
-// Read
+// Read (Login)
 app.post("/login", async (req, res) => {
   const { email, password } = req.body;
-
   try {
     const userExist = await User.findOne({ email });
-    const realpassword = await bcrypt.compare(password, userExist.password);
-    
     if (!userExist) {
       return res.send({ message: "User Not Found" });
     }
-    if (realpassword) {
+    const passwordMatch = await bcrypt.compare(password, userExist.password);
+    if (passwordMatch) {
       return res.send({ message: "Login Successfully" });
     }
-    res.send({ message: "Invalid Credentials" });
+    return res.send({ message: "Invalid Credentials" });
+  } catch (err) {
+    res.send(err);
+  }
+});
+
+// Get all users
+app.get("/users", async (req, res) => {
+  try {
+    const users = await User.find();
+    res.send(users);
   } catch (err) {
     res.send(err);
   }
@@ -72,21 +76,17 @@ app.put("/update/:id", async (req, res) => {
 // Delete
 app.delete("/delete/:id", async (req, res) => {
   const { id } = req.params;
-
   try {
-    const userExist = await User.findByIdAndDelete({ _id: id });
+    const userExist = await User.findByIdAndDelete(id);
     if (!userExist) {
       return res.send({ message: "User not found " });
     }
-
     res.send({ message: "User Deleted Successfully " });
   } catch (err) {
     res.send(err);
   }
 });
 
-app.listen(5000, (req, res) => {
+app.listen(5000, () => {
   console.log("Server is running");
 });
-
-
