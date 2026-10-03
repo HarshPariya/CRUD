@@ -4,89 +4,84 @@ import connectDB from "./config/db.js";
 import User from "./model/userSchema.js";
 import bcrypt from "bcrypt";
 
-
 // Middleware
 connectDB();
 app.use(express.json());
 
-
 app.get("/", (req, res) => {
-  res.send("HEllo");
+  res.send("Hello");
 });
 
-// Create
+// Register a new user
 app.post("/register", async (req, res) => {
   const { email, name, password } = req.body;
   try {
-    const userExist = await User.findOne({ email: email });
-    if (userExist) {
-      return res.send({ message: "User Already Exist" });
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: "User already exists" });
     }
-    // const hashedPassword = await bcrypt.hash(password, 10);
-    // console.log(hashedPassword);
-
-    // const userData = await User({ email, name, password: hashedPassword });
-    userData.save();
-
-    return res.send({ message: "User Created Successfully" });
+    // Hash the password before storing
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = new User({ email, name, password: hashedPassword });
+    await user.save();
+    return res.status(201).json({ message: "User created successfully" });
   } catch (err) {
-    res.send(err);
+    console.error(err);
+    return res.status(500).json({ error: err.message });
   }
 });
 
-// Read
+// Login a user
 app.post("/login", async (req, res) => {
   const { email, password } = req.body;
-
   try {
-    const userExist = await User.findOne({ email });
-    const realpassword = await bcrypt.compare(password, userExist.password);
-    
-    if (!userExist) {
-      return res.send({ message: "User Not Found" });
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
     }
-    if (realpassword) {
-      return res.send({ message: "Login Successfully" });
+    const passwordMatches = await bcrypt.compare(password, user.password);
+    if (passwordMatches) {
+      return res.json({ message: "Login successful" });
     }
-    res.send({ message: "Invalid Credentials" });
+    return res.status(401).json({ message: "Invalid credentials" });
   } catch (err) {
-    res.send(err);
+    console.error(err);
+    return res.status(500).json({ error: err.message });
   }
 });
 
-// Update
+// Update a user
 app.put("/update/:id", async (req, res) => {
   try {
-    const userExist = await User.findByIdAndUpdate(req.params.id, req.body, {
+    const updatedUser = await User.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
     });
-    if (!userExist) {
-      return res.send({ message: "User not Updated Successfully" });
+    if (!updatedUser) {
+      return res.status(404).json({ message: "User not found" });
     }
-    res.send({ message: "User Updated Successfully" });
+    return res.json({ message: "User updated successfully", user: updatedUser });
   } catch (err) {
-    res.send(err);
+    console.error(err);
+    return res.status(500).json({ error: err.message });
   }
 });
 
-// Delete
+// Delete a user
 app.delete("/delete/:id", async (req, res) => {
   const { id } = req.params;
-
   try {
-    const userExist = await User.findByIdAndDelete({ _id: id });
-    if (!userExist) {
-      return res.send({ message: "User not found " });
+    const deletedUser = await User.findByIdAndDelete(id);
+    if (!deletedUser) {
+      return res.status(404).json({ message: "User not found" });
     }
-
-    res.send({ message: "User Deleted Successfully " });
+    return res.json({ message: "User deleted successfully" });
   } catch (err) {
-    res.send(err);
+    console.error(err);
+    return res.status(500).json({ error: err.message });
   }
 });
 
-app.listen(5000, (req, res) => {
-  console.log("Server is running");
+app.listen(5000, () => {
+  console.log("Server is running on port 5000");
 });
-
-
